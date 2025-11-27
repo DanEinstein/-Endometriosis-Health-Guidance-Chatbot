@@ -22,7 +22,7 @@ embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
 # Initialize Pinecone client
 pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
-index_name = 'hiv'
+index_name = 'endometriosis'
 
 # Check if index exists; if not, create it
 existing_indexes = pc.list_indexes()
@@ -82,7 +82,7 @@ def concurrent_embed_documents(embed_model, documents, batch_size=100, max_worke
     return all_embeddings, all_contents
 
 # Load documents from PDF
-pdf_file_path = 'WHO_HIV.pdf'
+pdf_file_path = 'Endometriosis Health Guidance Chatbot.pdf'
 pdf_loader = PyPDFLoader(pdf_file_path)
 documents = pdf_loader.load()
 

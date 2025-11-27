@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain.chains import LLMChain
-from langchain.memory import ChatMessageHistory, ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain.memory import ConversationBufferMemory
 from pinecone import Pinecone
 
 # Apply nest_asyncio patch
@@ -28,13 +29,26 @@ if not GOOGLE_API_KEY:
     st.stop()
 
 # Initialize Pinecone and embedding model
-pc = Pinecone(api_key=PINECONE_API_KEY)
-pinecone_index = pc.Index("hiv")
-embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+try:
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    
+    # Check if index exists
+    existing_indexes = pc.list_indexes()
+    index_names = [index.name for index in existing_indexes.indexes]
+    
+    if "endometriosis" not in index_names:
+        st.error("Pinecone index 'endometriosis' not found. Please run pinecone_vector.py first to create and populate the index.")
+        st.stop()
+    
+    pinecone_index = pc.Index("endometriosis")
+    embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+except Exception as e:
+    st.error(f"Error connecting to Pinecone: {str(e)}")
+    st.stop()
 
 # Define system prompt template
 system_prompt_template = """
-Your name is HIV Health Guidance Chatbot. You are a health advisor specializing in HIV. Answer questions very very briefly and accurately. Use the following information to answer the user's question:
+Your name is Endometriosis Health Guidance Chatbot. You are a health advisor specializing in Endometriosis. Answer questions very very briefly and accurately. Use the following information to answer the user's question:
 
 {doc_content}
 
@@ -119,13 +133,13 @@ def generate_response(question):
     return res.get('text', '')
 
 # Streamlit app layout remains unchanged
-st.title("HIV Health Guidance Assistant")
-st.write("Ask your HIV-related health questions and receive guidance based on our knowledge base.")
+st.title("Endometriosis Health Guidance Assistant")
+st.write("Ask your Endometriosis-related health questions and receive guidance based on our knowledge base.")
 
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "Hello! I'm your HIV Health Guidance Assistant. How can I assist you today?"}
+        {"role": "assistant", "content": "Hello! I'm your Endometriosis Health Guidance Assistant. How can I assist you today?"}
     ]
 
 # Display chat history
