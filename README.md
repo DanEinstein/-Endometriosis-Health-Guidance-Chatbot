@@ -95,11 +95,12 @@ Before you begin, make sure you have the following installed on your computer:
 2.  **Navigate to the directory** where you want to store the project (e.g., `cd Documents/Projects`).
 3.  **Clone the repository** using the following command:
     ```bash
-    git clone https://github.com/Ajisco/DSA_HIV.git
+    https://github.com/GRACENGARI/TAMBUA-WOMENINTECH-CHATBOT/
+    
     ```
 4.  **Navigate into the project directory:**
     ```bash
-    cd DSA_HIV
+    cd  Endometriosis
     ```
 
 ### Setting up in VS Code
