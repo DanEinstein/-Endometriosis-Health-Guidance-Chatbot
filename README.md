@@ -1,10 +1,10 @@
-# HIV Health Guidance Chatbot With RAG
+# 🌸 Endometriosis Health Guidance Chatbot
 
-Welcome to the HIV Health Guidance Chatbot project! 🎉 This practicum is designed to demonstrate how to build a helpful chatbot using Large Language Models (LLMs), vector databases, and Streamlit for the user interface.
+Welcome to the 🌸 Endometriosis Health Guidance Chatbot! 🎉 This practicum is designed to demonstrate how to build a helpful chatbot using Large Language Models (LLMs), vector databases, and Streamlit for the user interface.
 
 This README will guide you step-by-step from setting up the project to understanding its core components. Whether you're new to Python, LLMs, or even coding, we aim to make this journey smooth and educational!
 
-**GitHub Repository:** [https://github.com/Ajisco/DSA_HIV](https://github.com/Ajisco/DSA_HIV)
+**GitHub Repository:** https://github.com/GRACENGARI/TAMBUA-WOMENINTECH-CHATBOT
 
 ---
 
@@ -34,18 +34,19 @@ This README will guide you step-by-step from setting up the project to understan
 
 ---
 
-## About The Project
-
-This project is an **HIV Health Guidance Chatbot**. Its main goal is to answer user questions about HIV accurately and briefly. It uses information from a medical document (in this case, `WHO_HIV.pdf`) to provide context-aware responses.
+## This project is an Endometriosis Health Guidance Chatbot. Its main goal is to answer user questions about endometriosis accurately and briefly. It uses information from a medical document (in this case, ENDOMETRIOSIS_GUIDE.pdf) to provide context-aware responses.
 
 Imagine you have a lot of information in a PDF document, and you want an easy way for people to ask questions and get answers directly from that document. This project shows you how to build such a system!
 
 The chatbot:
-1.  Takes a user's question.
-2.  Searches a specialized database (Pinecone) for relevant information from the `WHO_HIV.pdf` document.
-3.  Uses a powerful AI model (Google's Gemini 2.0 Flash) to understand the question and the retrieved information.
-4.  Generates a concise and helpful answer.
 
+Takes a user's question.
+
+Searches a specialized database (Pinecone) for relevant information from the ENDOMETRIOSIS_GUIDE.pdf document.
+
+Uses a powerful AI model (Google's Gemini 2.0 Flash) to understand the question and the retrieved information.
+
+Generates a concise and helpful answer.
 ---
 
 ## ✨ Features
@@ -179,9 +180,9 @@ The project has two main Python scripts:
 1.  **Download or place your PDF file** into the root directory of the project. The current script `pinecone_vector.py` is set to look for a file named `WHO_HIV.pdf`.
     * If your PDF has a different name, you'll need to update this line in `pinecone_vector.py`:
         ```python
-        pdf_file_path = 'WHO_HIV.pdf' # name of pdf
+        pdf_file_path = 'WHO_Endometriosis.pdf' # name of pdf
         ```
-    * For this practicum, ensure you have a `WHO_HIV.pdf` file in the main `DSA_HIV` folder. You can find suitable WHO HIV documents online or use one provided for the practicum.
+    * For this practicum, ensure you have a `WHO_endometriosis.pdf` file in the main `DSA_HIV` folder. You can find suitable WHO HIV documents online or use one provided for the practicum.
 
 ### Step 2: Populate the Vector Database (`pinecone_vector.py`)
 
@@ -620,7 +621,7 @@ DSA_HIV/
 
 If you have suggestions or improvements, please feel free to:
 
-1.  Fork the Project ([https://github.com/Ajisco/DSA\_HIV/fork](https://www.google.com/search?q=https://github.com/Ajisco/DSA_HIV/fork))
+1.  Fork the Project 
 2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
 3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4.  Push to the Branch (`git push origin feature/AmazingFeature`)
@@ -636,7 +637,6 @@ This project is likely distributed under a license like MIT or Apache 2.0.
 
 -----
 
-## 🙏 Acknowledgments
 
   * The creators of Langchain, Streamlit, Pinecone, and Google Generative AI for their powerful tools.
   * The open-source community.
