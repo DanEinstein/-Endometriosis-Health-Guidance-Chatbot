@@ -1,10 +1,22 @@
-langchain==0.1.13
-langchain-community==0.0.29
-langchain-google-genai
-pinecone-client==3.0.2
+# App / RAG (no PyTorch / CUDA)
 streamlit
 python-dotenv==1.0.0
-pypdf
 tqdm==4.66.2
-nest-asyncio==1.6.0
-google-generativeai==0.5.0
+pypdf
+chromadb
+fastembed
+langchain
+langchain-community
+langchain-chroma
+langchain-text-splitters
+langchain-ollama
+
+# PDF cleaning (lightweight; no torch)
+pymupdf
+pytesseract
+Pillow
+
+# Optional heavy cleaners (often pull PyTorch — install only if you need them):
+# docling
+# marker-pdf
+# unstructured[pdf]

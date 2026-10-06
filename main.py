@@ -1,162 +1,166 @@
-import os
-import asyncio
-import nest_asyncio
-import streamlit as st
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-from langchain.chains import LLMChain
-from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain.memory import ConversationBufferMemory
-from pinecone import Pinecone
+"""
+Endometriosis Health Guidance Chatbot — Streamlit UI.
 
-# Apply nest_asyncio patch
-nest_asyncio.apply()
-
-# Load environment variables
-load_dotenv()
-
-# Get API keys
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-# Check for missing API keys
-if not PINECONE_API_KEY:
-    st.error("Pinecone API key is missing. Please set it in your .env file.")
-    st.stop()
-if not GOOGLE_API_KEY:
-    st.error("Google API key is missing. Please set it in your .env file.")
-    st.stop()
-
-# Initialize Pinecone and embedding model
-try:
-    pc = Pinecone(api_key=PINECONE_API_KEY)
-    
-    # Check if index exists
-    existing_indexes = pc.list_indexes()
-    index_names = [index.name for index in existing_indexes.indexes]
-    
-    if "endometriosis" not in index_names:
-        st.error("Pinecone index 'endometriosis' not found. Please run pinecone_vector.py first to create and populate the index.")
-        st.stop()
-    
-    pinecone_index = pc.Index("endometriosis")
-    embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-except Exception as e:
-    st.error(f"Error connecting to Pinecone: {str(e)}")
-    st.stop()
-
-# Define system prompt template
-system_prompt_template = """
-Your name is Endometriosis Health Guidance Chatbot. You are a health advisor specializing in Endometriosis. Answer questions very very briefly and accurately. Use the following information to answer the user's question:
-
-{doc_content}
-
-Provide very brief accurate and helpful health response based on the provided information and your expertise.
+Retrieval: local ChromaDB (built by chroma_vector.py from cleaned_data/)
+Embeddings: FastEmbed (ONNX, no PyTorch)
+LLM: local Ollama (default gemma3:1b)
 """
 
-def generate_response(question):
-    """Generate a response using Pinecone retrieval and Gemini 2.0 Flash."""
-    # Create event loop for current thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    # Embed the user's question
-    query_embed = embed_model.embed_query(question)
-    query_embed = [float(val) for val in query_embed]  # Ensure standard floats
-    
-    # Query Pinecone for relevant documents - MODIFIED: top_k=3
-    results = pinecone_index.query(
-        vector=query_embed,
-        top_k=3,  # CHANGED from 2 to 3
-        include_values=False,
-        include_metadata=True
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import streamlit as st
+from dotenv import load_dotenv
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+try:
+    from langchain_chroma import Chroma
+except ImportError:  # pragma: no cover
+    from langchain_community.vectorstores import Chroma
+
+from llm_router import invoke_llm
+
+load_dotenv()
+
+CHROMA_DIR = Path("chroma_db")
+COLLECTION_NAME = "endometriosis"
+EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+TOP_K = 4
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:1b")
+
+SYSTEM_PROMPT_TEMPLATE = """
+Your name is Endometriosis Health Guidance Chatbot. You are a health advisor specializing in Endometriosis.
+Answer questions very briefly and accurately.
+Use the following retrieved knowledge-base information to answer the user's question.
+If the context is insufficient, say you are not sure and suggest consulting a healthcare professional.
+
+Important response rules:
+- Give a direct answer only.
+- Do NOT mention sources, documents, PDFs, pages, citations, references, or that you used retrieved context.
+- Do NOT include phrases like "according to the document", "based on the source", or "[Source ...]".
+- Do not invent medical claims beyond the context.
+
+Context (for your use only; never cite it aloud):
+{doc_content}
+"""
+
+
+@st.cache_resource(show_spinner="Loading knowledge base...")
+def load_vectorstore() -> Chroma:
+    if not CHROMA_DIR.exists():
+        raise FileNotFoundError(
+            f"Chroma directory not found: {CHROMA_DIR.resolve()}. "
+            "Run: python clean_documents.py --reset --engines pymupdf && python chroma_vector.py"
+        )
+
+    embeddings = FastEmbedEmbeddings(model_name=EMBED_MODEL)
+    store = Chroma(
+        persist_directory=str(CHROMA_DIR),
+        embedding_function=embeddings,
+        collection_name=COLLECTION_NAME,
     )
-    
-    # Extract document contents - MODIFIED: Added terminal printing
-    doc_contents = []
-    print("\n" + "="*50)
+    try:
+        count = store._collection.count()  # noqa: SLF001
+    except Exception:
+        count = None
+    if count == 0:
+        raise RuntimeError(
+            "Chroma collection is empty. Run: python chroma_vector.py after cleaning PDFs."
+        )
+    return store
+
+
+def format_docs(docs) -> str:
+    """Join retrieved chunk text only (no source labels for the LLM)."""
+    parts = [doc.page_content.strip() for doc in docs if doc.page_content.strip()]
+    return "\n\n".join(parts) if parts else "No additional information found."
+
+
+def generate_response(question: str, vectorstore: Chroma) -> str:
+    """Retrieve from Chroma and answer via local Ollama."""
+    docs = vectorstore.similarity_search(question, k=TOP_K)
+
+    print("\n" + "=" * 50)
     print(f"RETRIEVED DOCUMENTS FOR: '{question}'")
-    for i, match in enumerate(results.get('matches', [])):
-        text = match['metadata'].get('text', '')
-        doc_contents.append(text)
-        print(f"\nDOCUMENT {i+1}:\n{text}\n")
-    print("="*50 + "\n")
-    
-    doc_content = "\n".join(doc_contents).replace('{', '{{').replace('}', '}}') if doc_contents else "No additional information found."
-    
-    # Format the system prompt with retrieved content
-    formatted_prompt = system_prompt_template.format(doc_content=doc_content)
-    
-    # Rebuild chat history from session state
-    chat_history = ChatMessageHistory()
+    for i, doc in enumerate(docs, start=1):
+        print(f"\nDOCUMENT {i} ({doc.metadata.get('source', '?')}):\n{doc.page_content}\n")
+    print("=" * 50 + "\n")
+
+    doc_content = format_docs(docs).replace("{", "{{").replace("}", "}}")
+    system_text = SYSTEM_PROMPT_TEMPLATE.format(doc_content=doc_content)
+
+    history_messages = []
     for msg in st.session_state.chat_history:
         if msg["role"] == "user":
-            chat_history.add_user_message(msg["content"])
+            history_messages.append(HumanMessage(content=msg["content"]))
         elif msg["role"] == "assistant":
-            chat_history.add_ai_message(msg["content"])
-    
-    # Initialize memory with chat history
-    memory = ConversationBufferMemory(
-        memory_key="chat_history",
-        chat_memory=chat_history,
-        return_messages=True
-    )
-    
-    # Create the conversation prompt
-    prompt = ChatPromptTemplate(
-        messages=[
-            SystemMessagePromptTemplate.from_template(formatted_prompt),
+            history_messages.append(AIMessage(content=msg["content"]))
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(content=system_text),
             MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{question}")
+            ("human", "{question}"),
         ]
     )
-    
-    # Initialize Gemini 2.0 Flash model with explicit client
-    chat = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
-        temperature=0.1,
-        google_api_key=GOOGLE_API_KEY
-    )
-    
-    # Create the conversation chain
-    conversation = LLMChain(
-        llm=chat,
-        prompt=prompt,
-        memory=memory,
-        verbose=True
-    )
-    
-    # Generate the response
-    res = conversation({"question": question})
-    
-    return res.get('text', '')
+    prompt_value = prompt.invoke({"chat_history": history_messages, "question": question})
+    answer, _provider = invoke_llm(prompt_value)
+    return answer
 
-# Streamlit app layout remains unchanged
+
+# --- Streamlit UI ---
 st.title("Endometriosis Health Guidance Assistant")
-st.write("Ask your Endometriosis-related health questions and receive guidance based on our knowledge base.")
+st.write(
+    "Ask endometriosis-related health questions. Answers are grounded in the local "
+    "cleaned PDF knowledge base (ChromaDB) and generated locally with Ollama."
+)
 
-# Initialize chat history in session state
+try:
+    vectorstore = load_vectorstore()
+except Exception as exc:
+    st.error(str(exc))
+    st.stop()
+
+st.caption(
+    f"Retrieval: Chroma `{COLLECTION_NAME}` · Embeddings: FastEmbed · "
+    f"LLM: Ollama `{OLLAMA_MODEL}` (local)"
+)
+
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "Hello! I'm your Endometriosis Health Guidance Assistant. How can I assist you today?"}
+        {
+            "role": "assistant",
+            "content": (
+                "Hello! I'm your Endometriosis Health Guidance Assistant. "
+                "How can I assist you today?"
+            ),
+        }
     ]
 
-# Display chat history
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Handle user input
 user_input = st.chat_input("Ask your health question:")
 if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
     st.session_state.chat_history.append({"role": "user", "content": user_input})
-    
+
     with st.spinner("Thinking..."):
-        response = generate_response(user_input)
-    
+        try:
+            response = generate_response(user_input, vectorstore)
+        except Exception as exc:
+            response = (
+                f"Sorry — I could not generate an answer ({exc}). "
+                "Check that Chroma is built and that Ollama is running "
+                f"(e.g. `ollama pull {OLLAMA_MODEL}` and `ollama serve`)."
+            )
+
     with st.chat_message("assistant"):
         st.markdown(response)
     st.session_state.chat_history.append({"role": "assistant", "content": response})
