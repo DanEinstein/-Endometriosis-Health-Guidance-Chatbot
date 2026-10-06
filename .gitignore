@@ -1,6 +1,58 @@
+# Secrets / local env
 .env
-flask_session
-*.csv
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+
+# Local planning notes (keep off GitHub)
+plan.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
 myenv/
-migrations
+env/
+
+# OS / editor
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# App / session leftovers
+flask_session/
+migrations/
+*.csv
+.streamlit/secrets.toml
+
+# Generated vector store (keep folder README only)
+chroma_db/**
+!chroma_db/README.md
+
+# Generated cleaned extracts (keep folder READMEs only)
+cleaned_data/**
+!cleaned_data/README.md
+!cleaned_data/by_engine/
+cleaned_data/by_engine/**
+!cleaned_data/by_engine/README.md
+
+# Optional heavy model caches if created locally
+.cache/
+huggingface/
+*.onnx
