@@ -1,5 +1,11 @@
-# Per-engine extracts
+# by_engine — extraction comparison copies
 
-Auto-filled by the cleaner (pymupdf, docling, marker, unstructured, etc.).
+Filled automatically by `clean_documents.py` when an engine runs.
 
-Useful for comparing extraction quality before choosing what to embed. Not used directly by Chroma ingest.
+Typical subfolders:
+
+- `pymupdf/` — always available in the lightweight stack
+- `docling/`, `marker/`, `unstructured/` — only if those optional packages are installed
+
+These files are for **comparing extract quality**.  
+`chroma_vector.py` does **not** read this folder; it uses the primary files in `cleaned_data/`.

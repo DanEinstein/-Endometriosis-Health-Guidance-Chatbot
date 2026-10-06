@@ -1,16 +1,25 @@
-# Raw PDF drop zone
+# data/pdfs — raw source PDFs
 
-Put **all** source PDFs for the RAG knowledge base directly in this folder:
+Drop **all** knowledge-base PDFs here (flat folder):
 
 - Patient guides / clinical handbooks
 - Research papers / journal articles
-- Any other endometriosis-related PDFs
+- Other endometriosis-related PDFs
 
-No subfolders required. Use clear filenames, e.g. `endo_pain_review_2023.pdf`.
+Use clear filenames, e.g. `endo_pain_review_2023.pdf`.
 
-**Do not** put cleaned files here — cleaning writes to `../../cleaned_data/`.
+## Rules
 
-**After you add PDFs**
-1. Run the cleaner → `cleaned_data/`
-2. Run Chroma ingest → `chroma_db/`
-3. Start the Streamlit chat app
+- This is the **raw** drop zone only.
+- Do not put cleaned files here — cleaning writes to `cleaned_data/`.
+- No category subfolders required.
+
+## Pipeline after adding PDFs
+
+```bash
+python clean_documents.py --reset --engines pymupdf
+python chroma_vector.py
+streamlit run main.py
+```
+
+Chat answers use local Chroma retrieval + **Ollama** (see project `.env.example`).
